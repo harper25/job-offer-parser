@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from bs4 import BeautifulSoup
 from datetime import date
 from pyppeteer import launch
@@ -5,10 +6,8 @@ from pyppeteer import launch
 import argparse
 import asyncio
 import os
+import urllib.parse
 
-
-FILENAME = ""
-URL = ""
 
 RAW_OFFERS_DIR = "offers_raw"
 OFFERS_DIR = "offers"
@@ -62,104 +61,178 @@ SELECTORS = {
     Attributes.DESCRIPTION: Selector(ElementTypeHTML.DIV.value, "css-p1hlmi"),
 }
 
-async def download_page():
-    browser = await launch()
-    page = await browser.newPage()
-
-    await page.goto(URL)
-    page_content = await page.content()
-
-    # propose filename & wait for input
-
-    with open(os.path.join(RAW_OFFERS_DIR, FILENAME), "w") as file:
-        file.write(page_content)
-
-    await browser.close()
 
 
-asyncio.get_event_loop().run_until_complete(download_page())
+class Parser(ABC):
+    def __init__(self, text, selectors=None, attributes=None):
+        self._text = text
+        self._selectors = selectors
+        self._attributes = attributes
+        self._soup = BeautifulSoup(self._text, features="html.parser")
+        self._parsed = []
+
+    @abstractmethod
+    def generate_filename(self):
+        pass
+
+    @abstractmethod
+    def parse(self):
+        pass
+
+    @abstractmethod
+    def meets_condition(portal):
+        pass
+
+    def get_attribute(self, attribute, soup=None):
+        soup = soup or self._soup
+        element = soup.find(
+            self._selectors[attribute].html,
+            class_=self._selectors[attribute].class_
+        )
+        return element
 
 
-def get_attribute(soup, attribute, selectors=SELECTORS):
-    element = soup.find(selectors[attribute].html, class_=selectors[attribute].class_)
-    return element
+    def get_attributes(self, attribute, soup=None):
+        soup = soup or self._soup
+        element = soup.find_all(
+            self._selectors[attribute].html,
+            class_=self._selectors[attribute].class_
+        )
+        return element
 
 
-def get_attributes(soup, attribute, selectors=SELECTORS):
-    element = soup.find_all(selectors[attribute].html, class_=selectors[attribute].class_)
-    return element
+class JustJoinITParser(Parser):
+    def __init__(self, text, selectors=None, attributes=None):
+        selectors = selectors or SELECTORS
+        attributes = attributes or Attributes
+        super().__init__(text, selectors=selectors, attributes=attributes)
+
+    def meets_condition(portal):
+        return "justjoin" in portal
+
+    def generate_filename(self):
+        today = date.today().strftime("%y%m%d")
+        company_name = self.get_attribute(self._attributes.COMPANY_NAME)
+        job_title = self.get_attribute(self._attributes.JOB_TITLE)
+        return f"{today} {company_name.get_text()} - {job_title.get_text()}.html"
+
+    def parse(self):
+        # with open(os.path.join(RAW_OFFERS_DIR, FILENAME), "r") as file:
+        #     page_content = file.read()
+
+        debug_filename = self.generate_filename()
+        print("-"*len(debug_filename))
+        print(debug_filename)
+        print("-"*len(debug_filename))
+
+        job_title = self.get_attribute(Attributes.JOB_TITLE)
+        print(job_title.get_text())
+
+        # import sys
+        # sys.exit(0)
+
+        summary_soup = self.get_attribute(Attributes.SUMMARY)
+        # print(summary_soup.get_text())
+        company_name = self.get_attribute(Attributes.COMPANY_NAME, soup=summary_soup)
+        print(company_name.get_text())
+        print(company_name["href"])
+        print()
+
+        location_soup = self.get_attribute(Attributes.LOCATION)
+
+        # print("Location self._soup:", location_soup)
+        company_location = self.get_attribute(Attributes.LOCATION_COMPANY, soup=location_soup)
+        working_location = self.get_attribute(Attributes.LOCATION_WORK, soup=location_soup)
+        print(company_location.get_text())
+        if working_location:
+            print(working_location.get_text())
+        print()
+
+        salary_soups = self.get_attributes(Attributes.SALARY)
+        for salary_soup in salary_soups:
+            print(salary_soup.get_text())
+
+        print()
+        company_details = self.get_attributes(Attributes.COMPANY_DETAILS)
+        for desc, item in zip(["Company Size:", "Level:"], company_details):
+            print(desc, item.get_text().strip())
+        print()
+
+        # print("Tech stack")
+        tech_stack_soup = self.get_attribute(Attributes.TECH_STACK)
+        # print(tech_stack_soup)
+        stack_soups = self.get_attributes(Attributes.STACKS, soup=tech_stack_soup)
+        for stack_soup in stack_soups:
+            tech = self.get_attribute(Attributes.TECH, soup=stack_soup)
+            level = self.get_attribute(Attributes.LEVEL, soup=stack_soup)
+            print(f"{tech.get_text()}: {level.get_text()}")
+
+        print()
+        details = self.get_attribute(Attributes.DESCRIPTION)
+        # print(details.get_text())
 
 
-def get_current_date():
-    today = date.today()
-    return today.strftime("%y%m%d")
+def get_portal_from_url(url):
+    parsed_url = urllib.parse.urlparse(url)
+    return parsed_url.hostname
 
 
-def generate_filename(soup):
-    today = get_current_date()
-    company_name = get_attribute(soup, Attributes.COMPANY_NAME)
-    job_title = get_attribute(soup, Attributes.JOB_TITLE)
-
-    return f"{today} {company_name.get_text()} - {job_title.get_text()}"
-
+def get_portal_parser(portal):
+    for parser_cls in Parser.__subclasses__():
+        if parser_cls.meets_condition(portal):
+            return parser_cls
+    raise NotImplementedError(f"No parser implemented for {portal}!")
 
 
-def parse():
-    with open(os.path.join(RAW_OFFERS_DIR, FILENAME), "r") as file:
-        page_content = file.read()
+def main():
+    source = get_cli_arguments()
+    is_url = source.startswith("https:")
+    is_file = os.path.exists(source)
 
-    soup = BeautifulSoup(page_content, features="html.parser")
+    if is_url:
 
-    debug_filename = generate_filename(soup)
-    print("-"*len(debug_filename))
-    print(debug_filename)
-    print("-"*len(debug_filename))
+        # portal = get_portal_from_url(source)
+        # print(portal)
 
-    job_title = get_attribute(soup, Attributes.JOB_TITLE)
-    print(job_title.get_text())
+        # parser_cls = get_portal_parser(portal)
+        # print(parser_cls)
 
-    # import sys
-    # sys.exit(0)
+        # import sys
+        # sys.exit(0)
 
-    summary_soup = get_attribute(soup, Attributes.SUMMARY)
-    # print(summary_soup.get_text())
-    company_name = get_attribute(summary_soup, Attributes.COMPANY_NAME)
-    print(company_name.get_text())
-    print(company_name["href"])
-    print()
+        page_content = asyncio.get_event_loop().run_until_complete(
+            download_page(source)
+        )
 
-    location_soup = get_attribute(soup, Attributes.LOCATION)
+        parser = JustJoinITParser(page_content)
 
-    # print("Location soup:", location_soup)
-    company_location = get_attribute(location_soup, Attributes.LOCATION_COMPANY)
-    working_location = get_attribute(location_soup, Attributes.LOCATION_WORK)
-    print(company_location.get_text())
-    if working_location:
-        print(working_location.get_text())
-    print()
+        generated_filename = parser.generate_filename()
+        filename = ask_user_for_filename(generated_filename)
 
-    salary_soups = get_attributes(soup, Attributes.SALARY)
-    for salary_soup in salary_soups:
-        print(salary_soup.get_text())
+        save_to_file(page_content, os.path.join(RAW_OFFERS_DIR, filename))
+    elif is_file:
+        with open(source, "r") as file:
+            page_content = file.read()
 
-    print()
-    company_details = get_attributes(soup, Attributes.COMPANY_DETAILS)
-    for desc, item in zip(["Company Size:", "Level:"], company_details):
-        print(desc, item.get_text().strip())
-    print()
+        parser = JustJoinITParser(
+            page_content, selectors=SELECTORS, attributes=Attributes
+        )
+    else:
+        raise AttributeError("Please use correct URL or filename.")
 
-    # print("Tech stack")
-    tech_stack_soup = get_attribute(soup, Attributes.TECH_STACK)
-    # print(tech_stack_soup)
-    stack_soups = get_attributes(tech_stack_soup, Attributes.STACKS)
-    for stack_soup in stack_soups:
-        tech = get_attribute(stack_soup, Attributes.TECH)
-        level = get_attribute(stack_soup, Attributes.LEVEL)
-        print(f"{tech.get_text()}: {level.get_text()}")
+    parser.parse()
 
-    print()
-    details = get_attribute(soup, Attributes.DESCRIPTION)
-    # print(details.get_text())
+
+def ask_user_for_filename(proposition):
+    print(proposition)
+    user_filename = input(
+        f"Provide a filename or confirm \"{proposition}\" [Enter]: "
+    )
+    print(user_filename)
+    filename = user_filename or proposition
+    return filename
+
+
 def get_cli_arguments():
     parser = argparse.ArgumentParser()
 
@@ -193,4 +266,5 @@ async def download_page(url):
 
 
 
-parse()
+if __name__ == "__main__":
+    main()
