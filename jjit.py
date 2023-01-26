@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from datetime import date
 from pyppeteer import launch
 
+import argparse
 import asyncio
 import os
 
@@ -159,6 +160,36 @@ def parse():
     print()
     details = get_attribute(soup, Attributes.DESCRIPTION)
     # print(details.get_text())
+def get_cli_arguments():
+    parser = argparse.ArgumentParser()
+
+    # group = parser.add_mutually_exclusive_group(required=True)
+    # group.add_argument("--url", default=None)
+    # group.add_argument("--file", default=None)
+
+    parser.add_argument("source")
+    # save_raw=True
+    # save_output=True # default True
+    # print_to_stdout=True # default True
+
+    args = parser.parse_args()
+    return args.source
+
+
+def save_to_file(text, filename):
+    with open(filename, "w") as file:
+        file.write(text)
+
+
+async def download_page(url):
+    browser = await launch()
+    page = await browser.newPage()
+
+    await page.goto(url)
+    page_content = await page.content()
+    await browser.close()
+
+    return page_content
 
 
 
