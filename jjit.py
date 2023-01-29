@@ -6,6 +6,7 @@ from pyppeteer import launch
 import argparse
 import asyncio
 import os
+import textwrap
 import urllib.parse
 
 
@@ -243,13 +244,20 @@ def ask_user_for_filename(proposition):
 
 
 def get_cli_arguments():
-    parser = argparse.ArgumentParser()
-
-    # group = parser.add_mutually_exclusive_group(required=True)
-    # group.add_argument("--url", default=None)
-    # group.add_argument("--file", default=None)
-
-    parser.add_argument("source")
+    parser = argparse.ArgumentParser(
+        description = textwrap.dedent(
+            '''
+            IT Job Offers Parser:
+            -> Download raw html of a given web page
+            -> Extract job offer data
+            -> Save the output for future reference ;)
+            '''),
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "source",
+        help="Provide URL or filename with raw HTML content"
+    )
     # save_raw=True
     # save_output=True # default True
     # print_to_stdout=True # default True
