@@ -79,6 +79,7 @@ class Parser(ABC):
     def parse(self):
         pass
 
+    @staticmethod
     @abstractmethod
     def meets_condition(portal):
         pass
@@ -107,8 +108,9 @@ class JustJoinITParser(Parser):
         attributes = attributes or Attributes
         super().__init__(text, selectors=selectors, attributes=attributes)
 
-    def meets_condition(portal):
-        return "justjoin" in portal
+    @staticmethod
+    def meets_condition(source):
+        return "justjoin" in source
 
     def generate_filename(self):
         today = date.today().strftime("%y%m%d")
@@ -172,6 +174,13 @@ class JustJoinITParser(Parser):
         # print(details.get_text())
 
 
+def identify_portal(page_content):
+    soup = BeautifulSoup(page_content, features="html.parser")
+    url = soup.find("meta", property="og:url")["content"]
+    portal = get_portal_from_url(url)
+    return portal
+
+
 def get_portal_from_url(url):
     parsed_url = urllib.parse.urlparse(url)
     return parsed_url.hostname
@@ -181,7 +190,8 @@ def get_portal_parser(portal):
     for parser_cls in Parser.__subclasses__():
         if parser_cls.meets_condition(portal):
             return parser_cls
-    raise NotImplementedError(f"No parser implemented for {portal}!")
+    raise NotImplementedError(f"No parser found for {portal}!")
+
 
 
 def main():
@@ -190,35 +200,34 @@ def main():
     is_file = os.path.exists(source)
 
     if is_url:
+        page_content = asyncio.run(download_page(source))
+        portal = get_portal_from_url(source)
+        proposed_filename = "text.html"
 
-        # portal = get_portal_from_url(source)
-        # print(portal)
+        try:
+            parser_cls = get_portal_parser(portal)
+            print(parser_cls)
+            parser = parser_cls(page_content)
+            proposed_filename = parser.generate_filename()
+        except NotImplementedError as e:
+            print(e)
+            return
+        finally:
+            filename = ask_user_for_filename(proposed_filename)
+            save_to_file(page_content, os.path.join(RAW_OFFERS_DIR, filename))
 
-        # parser_cls = get_portal_parser(portal)
-        # print(parser_cls)
-
-        # import sys
-        # sys.exit(0)
-
-        page_content = asyncio.get_event_loop().run_until_complete(
-            download_page(source)
-        )
-
-        parser = JustJoinITParser(page_content)
-
-        generated_filename = parser.generate_filename()
-        filename = ask_user_for_filename(generated_filename)
-
-        save_to_file(page_content, os.path.join(RAW_OFFERS_DIR, filename))
     elif is_file:
         with open(source, "r") as file:
             page_content = file.read()
+        portal = identify_portal(page_content)
 
-        parser = JustJoinITParser(
-            page_content, selectors=SELECTORS, attributes=Attributes
-        )
-    else:
-        raise AttributeError("Please use correct URL or filename.")
+        try:
+            parser_cls = get_portal_parser(portal)
+            print(parser_cls)
+            parser = parser_cls(page_content)
+        except NotImplementedError as e:
+            print(e)
+            return
 
     parser.parse()
 
@@ -247,6 +256,12 @@ def get_cli_arguments():
 
     args = parser.parse_args()
     return args.source
+
+
+def read_from_file(filename):
+    with open(filename, "r") as file:
+        content = file.read()
+    return content
 
 
 def save_to_file(text, filename):
