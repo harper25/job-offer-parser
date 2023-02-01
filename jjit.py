@@ -124,60 +124,77 @@ class JustJoinITParser(Parser):
     def meets_condition(source):
         return "justjoin" in source
 
+    def get_company_name(self):
+        return self.get_attribute(self._attributes.COMPANY_NAME).get_text()
+
+    def get_job_title(self):
+        return self.get_attribute(self._attributes.JOB_TITLE).get_text()
+
     def parse(self):
-        # with open(os.path.join(RAW_OFFERS_DIR, FILENAME), "r") as file:
-        #     page_content = file.read()
+        parsed_job_offer = []
+        heading = self._get_heading()
+        location = self._get_location()
+        salary = self._get_salary()
+        team_details = self._get_team_details()
+        tech_stacks = self._get_tech_stack()
+        detailed_description = self._get_description()
+        parsed_job_offer = [
+            heading,
+            location,
+            salary,
+            team_details,
+            tech_stacks,
+            detailed_description
+        ]
+        return parsed_job_offer
 
-        debug_filename = self.generate_filename()
-        print("-"*len(debug_filename))
-        print(debug_filename)
-        print("-"*len(debug_filename))
+    def _get_heading(self):
+        job_title = self.get_attribute(self._attributes.JOB_TITLE)
+        summary_soup = self.get_attribute(self._attributes.SUMMARY)
+        company_name = self.get_attribute(self._attributes.COMPANY_NAME, soup=summary_soup)
+        company_and_job_title = f"{company_name.get_text()} - {job_title.get_text()}"
+        emphasis = "-"*len(company_and_job_title)
+        heading_result = "\n".join([emphasis, company_and_job_title, emphasis, company_name["href"]])
+        return heading_result
 
-        job_title = self.get_attribute(Attributes.JOB_TITLE)
-        print(job_title.get_text())
-
-        # import sys
-        # sys.exit(0)
-
-        summary_soup = self.get_attribute(Attributes.SUMMARY)
-        # print(summary_soup.get_text())
-        company_name = self.get_attribute(Attributes.COMPANY_NAME, soup=summary_soup)
-        print(company_name.get_text())
-        print(company_name["href"])
-        print()
-
-        location_soup = self.get_attribute(Attributes.LOCATION)
-
-        # print("Location self._soup:", location_soup)
-        company_location = self.get_attribute(Attributes.LOCATION_COMPANY, soup=location_soup)
-        working_location = self.get_attribute(Attributes.LOCATION_WORK, soup=location_soup)
-        print(company_location.get_text())
+    def _get_location(self):
+        location_soup = self.get_attribute(self._attributes.LOCATION)
+        company_location = self.get_attribute(self._attributes.LOCATION_COMPANY, soup=location_soup)
+        working_location = self.get_attribute(self._attributes.LOCATION_WORK, soup=location_soup)
+        location = [company_location.get_text()]
         if working_location:
-            print(working_location.get_text())
-        print()
+            location.append(working_location.get_text())
+        location_result = "\n".join(location)
+        return location_result
 
-        salary_soups = self.get_attributes(Attributes.SALARY)
-        for salary_soup in salary_soups:
-            print(salary_soup.get_text())
+    def _get_salary(self):
+        salary_soups = self.get_attributes(self._attributes.SALARY)
+        salary = [salary_soup.get_text() for salary_soup in salary_soups]
+        salary_result = "\n".join(salary)
+        return salary_result
 
-        print()
-        company_details = self.get_attributes(Attributes.COMPANY_DETAILS)
+    def _get_team_details(self):
+        company_details = self.get_attributes(self._attributes.COMPANY_DETAILS)
+        details = []
         for desc, item in zip(["Company Size:", "Level:"], company_details):
-            print(desc, item.get_text().strip())
-        print()
+            details.append(f"{desc} {item.get_text().strip()}")
+        details_result = "\n".join(details)
+        return details_result
 
-        # print("Tech stack")
-        tech_stack_soup = self.get_attribute(Attributes.TECH_STACK)
-        # print(tech_stack_soup)
-        stack_soups = self.get_attributes(Attributes.STACKS, soup=tech_stack_soup)
+    def _get_tech_stack(self):
+        tech_stack_soup = self.get_attribute(self._attributes.TECH_STACK)
+        stack_soups = self.get_attributes(self._attributes.STACKS, soup=tech_stack_soup)
+        tech_stacks = []
         for stack_soup in stack_soups:
-            tech = self.get_attribute(Attributes.TECH, soup=stack_soup)
-            level = self.get_attribute(Attributes.LEVEL, soup=stack_soup)
-            print(f"{tech.get_text()}: {level.get_text()}")
+            tech = self.get_attribute(self._attributes.TECH, soup=stack_soup)
+            level = self.get_attribute(self._attributes.LEVEL, soup=stack_soup)
+            tech_stacks.append(f"{tech.get_text()}: {level.get_text()}")
+        tech_stacks_result = "\n".join(tech_stacks)
+        return tech_stacks_result
 
-        print()
-        details = self.get_attribute(Attributes.DESCRIPTION)
-        # print(details.get_text())
+    def _get_description(self):
+        details = self.get_attribute(self._attributes.DESCRIPTION)
+        return details.get_text()
 
 
 def identify_portal(page_content):
@@ -238,7 +255,9 @@ def main():
             filename = ask_user_for_filename(proposed_filename)
             save_to_file(page_content, os.path.join(RAW_OFFERS_DIR, filename))
 
-    parser.parse()
+    parsed_offer = parser.parse()
+    print("\n\n".join(parsed_offer))
+    print(f"Parsed with {parser.__class__.__name__}")
 
 
 def ask_user_for_filename(proposition):
