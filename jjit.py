@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from bs4 import BeautifulSoup
 from datetime import date
 from pyppeteer import launch
+from typing import Protocol
 
 import argparse
 import asyncio
@@ -12,7 +13,7 @@ import urllib.parse
 
 RAW_OFFERS_DIR = "offers_raw"
 OFFERS_DIR = "offers"
-
+DEFAULT_RAW_OFFER_FILENAME = "test.html"
 
 from enum import Enum, auto
 from dataclasses import dataclass
@@ -63,7 +64,6 @@ SELECTORS = {
 }
 
 
-
 class Parser(ABC):
     def __init__(self, text, selectors=None, attributes=None):
         self._text = text
@@ -73,11 +73,15 @@ class Parser(ABC):
         self._parsed = []
 
     @abstractmethod
-    def generate_filename(self):
+    def parse(self):
         pass
 
     @abstractmethod
-    def parse(self):
+    def get_company_name(self):
+        pass
+
+    @abstractmethod
+    def get_job_title(self):
         pass
 
     @staticmethod
@@ -93,7 +97,6 @@ class Parser(ABC):
         )
         return element
 
-
     def get_attributes(self, attribute, soup=None):
         soup = soup or self._soup
         element = soup.find_all(
@@ -101,6 +104,14 @@ class Parser(ABC):
             class_=self._selectors[attribute].class_
         )
         return element
+
+
+class ParserGenerateFilename(Protocol):
+    def get_company_name(self):
+        ...
+
+    def get_job_title(self):
+        ...
 
 
 class JustJoinITParser(Parser):
@@ -112,12 +123,6 @@ class JustJoinITParser(Parser):
     @staticmethod
     def meets_condition(source):
         return "justjoin" in source
-
-    def generate_filename(self):
-        today = date.today().strftime("%y%m%d")
-        company_name = self.get_attribute(self._attributes.COMPANY_NAME)
-        job_title = self.get_attribute(self._attributes.JOB_TITLE)
-        return f"{today} {company_name.get_text()} - {job_title.get_text()}.html"
 
     def parse(self):
         # with open(os.path.join(RAW_OFFERS_DIR, FILENAME), "r") as file:
@@ -194,22 +199,38 @@ def get_portal_parser(portal):
     raise NotImplementedError(f"No parser found for {portal}!")
 
 
+def generate_filename(parser: ParserGenerateFilename):
+    today = date.today().strftime("%y%m%d")
+    company_name = parser.get_company_name()
+    job_title = parser.get_job_title()
+    return f"{today} {company_name} - {job_title}.html"
+
 
 def main():
     source = get_cli_arguments()
     is_url = source.startswith("https:")
     is_file = os.path.exists(source)
 
-    if is_url:
-        page_content = asyncio.run(download_page(source))
-        portal = get_portal_from_url(source)
-        proposed_filename = "text.html"
+    if is_file:
+        page_content = read_from_file(source)
+        portal = identify_portal(page_content)
 
         try:
             parser_cls = get_portal_parser(portal)
-            print(parser_cls)
             parser = parser_cls(page_content)
-            proposed_filename = parser.generate_filename()
+        except NotImplementedError as e:
+            print(e)
+            return
+
+    elif is_url:
+        page_content = asyncio.run(download_page(source))
+        portal = get_portal_from_url(source)
+
+        proposed_filename = DEFAULT_RAW_OFFER_FILENAME
+        try:
+            parser_cls = get_portal_parser(portal)
+            parser = parser_cls(page_content)
+            proposed_filename = generate_filename(parser)
         except NotImplementedError as e:
             print(e)
             return
@@ -217,28 +238,13 @@ def main():
             filename = ask_user_for_filename(proposed_filename)
             save_to_file(page_content, os.path.join(RAW_OFFERS_DIR, filename))
 
-    elif is_file:
-        with open(source, "r") as file:
-            page_content = file.read()
-        portal = identify_portal(page_content)
-
-        try:
-            parser_cls = get_portal_parser(portal)
-            print(parser_cls)
-            parser = parser_cls(page_content)
-        except NotImplementedError as e:
-            print(e)
-            return
-
     parser.parse()
 
 
 def ask_user_for_filename(proposition):
-    print(proposition)
     user_filename = input(
         f"Provide a filename or confirm \"{proposition}\" [Enter]: "
     )
-    print(user_filename)
     filename = user_filename or proposition
     return filename
 
@@ -286,7 +292,6 @@ async def download_page(url):
     await browser.close()
 
     return page_content
-
 
 
 if __name__ == "__main__":
