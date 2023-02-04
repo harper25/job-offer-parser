@@ -131,3 +131,4 @@ dmypy.json
 # Custom
 offers/
 offers_raw/
+.DS_Store
