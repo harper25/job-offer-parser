@@ -10,4 +10,6 @@ exclude =
     build,
     dist
     .venv
+    debug.py
+    tool.py
 max-complexity = 10

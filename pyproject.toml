@@ -21,10 +21,14 @@ pytest-cov = "^4.0.0"
 flake8-isort = "^6.0.0"
 flake8-use-fstring = "^1.4"
 flake8-comprehensions = "^3.10.1"
+types-beautifulsoup4 = "^4.11.6.5"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+jobparse = "job_offer_parser.__main__:main"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -75,6 +79,8 @@ exclude = [
     'two\.pyi$',  # but TOML's single-quoted strings do not
     '^three\.',
     'screen.py',
+    'debug.py',
+    'tool.py'
 ]
 disallow_untyped_defs = true
 warn_redundant_casts = true
