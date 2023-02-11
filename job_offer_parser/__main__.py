@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Protocol, Union
 from bs4 import BeautifulSoup, PageElement, Tag
 from pyppeteer import launch  # type: ignore
 
-RAW_OFFERS_DIR = "offers_raw"
+RAW_OFFERS_DIR = "raw"
 OFFERS_DIR = "offers"
 DEFAULT_RAW_OFFER_FILENAME = "test.html"
 
@@ -74,6 +74,10 @@ SELECTORS = {
 }
 
 
+class AttributeNotFoundError(Exception):
+    "Indicate that selected attribute was not found in parsed html"
+
+
 class Parser(ABC):
     def __init__(self, text: str, selectors: Dict[str, Selector]) -> None:
         self._text = text
@@ -103,7 +107,8 @@ class Parser(ABC):
         soup = soup or self._soup
         selector = self._selectors[attribute]
         element = soup.find(selector.html, class_=selector.class_)
-        assert isinstance(element, Tag)
+        if not isinstance(element, Tag):
+            raise AttributeNotFoundError
         return element
 
     def get_attributes(
@@ -131,8 +136,9 @@ class JustJoinITParser(Parser):
         attributes: Optional[Attributes] = None,
     ) -> None:
         selectors = selectors or SELECTORS
+        attrs = attributes or Attributes
+        self._attributes = attrs
         super().__init__(text, selectors)
-        self._attributes = attributes or Attributes
 
     @staticmethod
     def meets_condition(source: str) -> bool:
@@ -180,12 +186,14 @@ class JustJoinITParser(Parser):
         company_location = self.get_attribute(
             self._attributes.LOCATION_COMPANY.value, soup=location_soup
         )
-        working_location = self.get_attribute(
-            self._attributes.LOCATION_WORK.value, soup=location_soup
-        )
         location = [company_location.get_text()]
-        if working_location:
+        try:
+            working_location = self.get_attribute(
+                self._attributes.LOCATION_WORK.value, soup=location_soup
+            )
             location.append(working_location.get_text())
+        except AttributeNotFoundError:
+            pass
         location_result = "\n".join(location)
         return location_result
 
@@ -286,6 +294,7 @@ def main() -> None:
 
 
 def ask_user_for_filename(proposition: str) -> str:
+    proposition = proposition.replace("/", "|")
     user_filename = input(f'Provide a filename or confirm "{proposition}" [Enter]: ')
     filename = user_filename or proposition
     return filename

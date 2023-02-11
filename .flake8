@@ -12,4 +12,6 @@ exclude =
     .venv
     debug.py
     tool.py
+    .mypy_cache
+    .pytest_cache
 max-complexity = 10

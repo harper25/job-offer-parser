@@ -58,6 +58,7 @@ exclude = '''
     | \.git          # root of the project
     | \.hg
     | \.mypy_cache
+    | \.pytest_cache
     | \.tox
     | \.venv
     | _build
@@ -80,7 +81,9 @@ exclude = [
     '^three\.',
     'screen.py',
     'debug.py',
-    'tool.py'
+    'tool.py',
+    '.mypy_cache',
+    '.pytest_cache'
 ]
 disallow_untyped_defs = true
 warn_redundant_casts = true
