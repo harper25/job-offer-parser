@@ -1,7 +1,12 @@
 from enum import auto
 from typing import Dict, List, Optional
 
-from job_offer_parser.base_parser import AutoNameEnum, ElementTypeHTML, Parser, Selector
+from job_offer_parser.parsers.base_parser import (
+    AutoNameEnum,
+    ElementTypeHTML,
+    Parser,
+    Selector,
+)
 
 
 class NoFluffJobsAttributes(AutoNameEnum):

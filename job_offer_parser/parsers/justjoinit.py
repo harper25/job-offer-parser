@@ -2,8 +2,13 @@ from enum import auto
 from typing import Dict, List, Optional
 
 from bs4 import Tag
-from job_offer_parser.base_parser import AutoNameEnum, ElementTypeHTML, Parser, Selector
 from job_offer_parser.module_exceptions import AttributeNotFoundError
+from job_offer_parser.parsers.base_parser import (
+    AutoNameEnum,
+    ElementTypeHTML,
+    Parser,
+    Selector,
+)
 
 
 class JustJoinItAttributes(AutoNameEnum):
