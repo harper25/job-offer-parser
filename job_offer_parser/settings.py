@@ -1,0 +1,3 @@
+RAW_OFFERS_DIR = "raw"
+OFFERS_DIR = "offers"
+DEFAULT_RAW_OFFER_FILENAME = "test.html"

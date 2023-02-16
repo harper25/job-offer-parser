@@ -1,0 +1,17 @@
+[flake8]
+max-line-length = 88
+percent-greedy = 0
+format-greedy = 0
+ignore = D203
+exclude =
+    .git,
+    __pycache__,
+    old,
+    build,
+    dist
+    .venv
+    debug.py
+    tool.py
+    .mypy_cache
+    .pytest_cache
+max-complexity = 10

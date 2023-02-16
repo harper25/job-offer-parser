@@ -1,0 +1,100 @@
+[tool.poetry]
+name = "job-offer-parser"
+version = "0.1.0"
+description = ""
+authors = ["harper25 <olesjakubb@gmail.com>"]
+readme = "README.md"
+packages = [{include = "job_offer_parser"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+beautifulsoup4 = "^4.11.2"
+pyppeteer = "^1.0.2"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+mypy = "^0.991"
+pytest = "^7.2.1"
+pytest-cov = "^4.0.0"
+flake8-isort = "^6.0.0"
+flake8-use-fstring = "^1.4"
+flake8-comprehensions = "^3.10.1"
+types-beautifulsoup4 = "^4.11.6.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+jobparse = "job_offer_parser.__main__:main"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "--cov=. --cov-config=.coveragerc --cov-report term"
+testpaths = [
+    "tests"
+]
+
+[tool.isort]
+profile = "black"
+py_version=310
+src_paths = ["isort", "test"]
+line_length = 88
+use_parentheses = "true"
+multi_line_output = 3
+include_trailing_comma = true
+skip=[".venv", "debug.py", "tool.py"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.pytest_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+    | docs
+  )/
+  | foo.py           # also separately exclude a file named foo.py in
+                     # the root of the project
+  | debug.py
+  | tool.py
+)
+'''
+
+[tool.mypy]
+exclude = [
+    "^one\\.py$",  # TOML's double-quoted strings require escaping backslashes
+    'two\.pyi$',  # but TOML's single-quoted strings do not
+    '^three\.',
+    'screen.py',
+    'debug.py',
+    'tool.py',
+    '.mypy_cache',
+    '.pytest_cache'
+]
+disallow_untyped_defs = true
+warn_redundant_casts = true
+# ignore_missing_imports = true
+disallow_any_unimported = true
+no_implicit_optional = true
+warn_return_any = true
+strict_optional = true
+# pretty = true
+
+[[tool.mypy.overrides]]
+module = 'tests.files'
+disallow_untyped_defs = false
+disallow_incomplete_defs = true
