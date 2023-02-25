@@ -18,6 +18,8 @@ class AutoNameEnum(Enum):
 class ElementTypeHTML(AutoNameEnum):
     A = auto()
     DIV = auto()
+    H1 = auto()
+    H2 = auto()
     SPAN = auto()
 
 
