@@ -1,5 +1,5 @@
 from enum import auto
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from job_offer_parser.parsers.base_parser import (
     AutoNameEnum,
@@ -27,6 +27,8 @@ BULLDOGJOB_SELECTORS = {
 
 
 class BulldogJobParser(Parser):
+    portal_identifier = "bulldogjob"
+
     def __init__(
         self,
         text: str,
@@ -37,10 +39,6 @@ class BulldogJobParser(Parser):
         attrs = attributes or BulldogJobAttributes
         self._attributes = attrs
         super().__init__(text, selectors)
-
-    @staticmethod
-    def meets_condition(source: str) -> bool:
-        return "bulldogjob" in source
 
     def get_company_name(self) -> str:
         company_name = self.get_attribute(
@@ -53,6 +51,3 @@ class BulldogJobParser(Parser):
         job_title = self.get_attribute(self._attributes.JOB_TITLE.value).get_text()
         job_title = " ".join(job_title.split())
         return job_title
-
-    def parse(self) -> List[str]:
-        return ["Parsing will be implemented later..."]

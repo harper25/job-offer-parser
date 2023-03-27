@@ -69,6 +69,8 @@ JUST_JOIN_IT_SELECTORS = {
 
 
 class JustJoinITParser(Parser):
+    portal_identifier = "justjoin"
+
     def __init__(
         self,
         text: str,
@@ -79,10 +81,6 @@ class JustJoinITParser(Parser):
         attrs = attributes or JustJoinItAttributes
         self._attributes = attrs
         super().__init__(text, selectors)
-
-    @staticmethod
-    def meets_condition(source: str) -> bool:
-        return "justjoin" in source
 
     def get_company_name(self) -> str:
         return self.get_attribute(self._attributes.COMPANY_NAME.value).get_text()

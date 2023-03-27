@@ -1,5 +1,5 @@
 from enum import auto
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from job_offer_parser.parsers.base_parser import (
     AutoNameEnum,
@@ -26,6 +26,8 @@ THEPROTOCOL_SELECTORS = {
 
 
 class TheProtocolParser(Parser):
+    portal_identifier = "theprotocol"
+
     def __init__(
         self,
         text: str,
@@ -36,10 +38,6 @@ class TheProtocolParser(Parser):
         attrs = attributes or TheProtocolAttributes
         self._attributes = attrs
         super().__init__(text, selectors)
-
-    @staticmethod
-    def meets_condition(source: str) -> bool:
-        return "theprotocol" in source
 
     def get_company_name(self) -> str:
         company_name = self.get_attribute(
@@ -52,6 +50,3 @@ class TheProtocolParser(Parser):
         job_title = self.get_attribute(self._attributes.JOB_TITLE.value).get_text()
         job_title = " ".join(job_title.split())
         return job_title
-
-    def parse(self) -> List[str]:
-        return ["Parsing will be implemented later..."]

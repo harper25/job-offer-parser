@@ -30,14 +30,12 @@ class Selector:
 
 
 class Parser(ABC):
+    portal_identifier = ""
+
     def __init__(self, text: str, selectors: Dict[str, Selector]) -> None:
         self._text = text
         self._selectors = selectors
         self._soup = BeautifulSoup(self._text, features="html.parser")
-
-    @abstractmethod
-    def parse(self) -> List[str]:
-        pass
 
     @abstractmethod
     def get_company_name(self) -> str:
@@ -47,10 +45,9 @@ class Parser(ABC):
     def get_job_title(self) -> str:
         pass
 
-    @staticmethod
-    @abstractmethod
-    def meets_condition(portal: str) -> bool:
-        pass
+    @classmethod
+    def meets_condition(cls, portal: str) -> bool:
+        return cls.portal_identifier in portal if cls.portal_identifier else False
 
     def get_attribute(
         self, attribute: str, soup: Optional[Union[BeautifulSoup, Tag]] = None
@@ -69,6 +66,9 @@ class Parser(ABC):
         selector = self._selectors[attribute]
         element = soup.find_all(selector.html, class_=selector.class_)
         return element
+
+    def parse(self) -> List[str]:
+        return ["Parsing will be implemented later..."]
 
 
 class ParserGenerateFilename(Protocol):
