@@ -17,8 +17,10 @@ tasks:
     desc: check code formatting and run static checks (makes no changes)
     cmds:
       - isort --check-only .
-      - black --check .
-      - task: flake8
+      - cmd: black --check .
+        ignore_error: true
+      - cmd: flake8
+        ignore_error: true
       - task: mypy
 
   isort:

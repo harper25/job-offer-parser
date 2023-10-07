@@ -1,8 +1,9 @@
 import urllib.parse
 from datetime import date
-from typing import Callable
+from typing import List, Type
 
 from bs4 import BeautifulSoup
+from job_offer_parser.module_exceptions import NoParserFound
 from job_offer_parser.parsers.base_parser import Parser, ParserGenerateFilename
 from pyppeteer import launch  # type: ignore
 
@@ -14,11 +15,14 @@ def identify_portal(page_content: str) -> str:
     return portal
 
 
-def get_portal_parser(portal: str) -> Callable:
+def get_portal_parsers(portal: str) -> List[Type[Parser]]:
+    parser_candidates = []
     for parser_cls in Parser.__subclasses__():
         if parser_cls.meets_condition(portal):
-            return parser_cls
-    raise NotImplementedError(f"No parser found for {portal}!")
+            parser_candidates.append(parser_cls)
+    if not parser_candidates:
+        raise NoParserFound(f"No parser found for {portal}!")
+    return parser_candidates
 
 
 def get_portal_from_url(url: str) -> str:
