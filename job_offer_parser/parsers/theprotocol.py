@@ -1,11 +1,13 @@
 from enum import auto
-from typing import Dict, Optional
+from typing import Optional
 
 from job_offer_parser.parsers.base_parser import (
     AutoNameEnum,
-    ElementTypeHTML,
+    BaseParser,
+    HTMLTag,
     Parser,
     Selector,
+    Selectors,
 )
 
 
@@ -14,39 +16,26 @@ class TheProtocolAttributes(AutoNameEnum):
     JOB_TITLE = auto()
 
 
-THEPROTOCOL_SELECTORS = {
-    TheProtocolAttributes.COMPANY_NAME.value: Selector(
-        ElementTypeHTML.H2.value, "rootClass_rpqnjlt body1_b1gato5c initial_i1m6fsnc"
-    ),
-    TheProtocolAttributes.JOB_TITLE.value: Selector(
-        ElementTypeHTML.H1.value,
-        "rootClass_rpqnjlt body1_b1gato5c initial_i1m6fsnc titleClass_ttiz6zs",
-    ),
-}
+THEPROTOCOL_SELECTORS = Selectors(
+    {
+        TheProtocolAttributes.COMPANY_NAME.value: Selector(
+            HTMLTag.H2.value, "rootClass_rpqnjlt body1_b1gato5c initial_i1m6fsnc"
+        ),
+        TheProtocolAttributes.JOB_TITLE.value: Selector(
+            HTMLTag.H1.value,
+            "rootClass_rpqnjlt body1_b1gato5c initial_i1m6fsnc titleClass_ttiz6zs",
+        ),
+    }
+)
 
 
-class TheProtocolParser(Parser):
+class TheProtocolParser(BaseParser, Parser):
     portal_identifier = "theprotocol"
 
     def __init__(
         self,
         text: str,
-        selectors: Optional[Dict[str, Selector]] = None,
-        attributes: Optional[TheProtocolAttributes] = None,
+        selectors: Optional[Selectors] = None,
     ) -> None:
         selectors = selectors or THEPROTOCOL_SELECTORS
-        attrs = attributes or TheProtocolAttributes
-        self._attributes = attrs
         super().__init__(text, selectors)
-
-    def get_company_name(self) -> str:
-        company_name = self.get_attribute(
-            self._attributes.COMPANY_NAME.value
-        ).get_text()
-        company_name = " ".join(company_name.split())
-        return company_name
-
-    def get_job_title(self) -> str:
-        job_title = self.get_attribute(self._attributes.JOB_TITLE.value).get_text()
-        job_title = " ".join(job_title.split())
-        return job_title
